@@ -9,32 +9,31 @@ batch_size = 64
 transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.1307,),(0.3081))])
 train_dataset = datasets.MNIST(root='./dataset/mnist/',
                                train=True,
-                               download=True,
+                               download=False,
                                transform=transform)
 train_loader = DataLoader(dataset=train_dataset,shuffle=True,batch_size=batch_size)
 
 test_dataset = datasets.MNIST(root='./dataset/mnist/',
                                train=False,
-                               download=True,
+                               download=False,
                                transform=transform)
 test_loader = DataLoader(dataset=test_dataset,shuffle=True,batch_size=batch_size)
 
 class Net(torch.nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.l1 = torch.nn.Linear(784,512)
-        self.l2 = torch.nn.Linear(512,256)
-        self.l3 = torch.nn.Linear(256,128)
-        self.l4 = torch.nn.Linear(128, 64)
-        self.l5 = torch.nn.Linear(64, 10)
+        self.conv1 = torch.nn.Conv2d(1, 10, 5)
+        self.conv2 = torch.nn.Conv2d(10, 20, 5)
+        self.pooling = torch.nn.MaxPool2d(2)
+        self.fc = torch.nn.Linear(320, 10)
 
     def forward(self, x):
-        x = x.view(-1,784)
-        x = F.relu(self.l1(x))
-        x = F.relu(self.l2(x))
-        x = F.relu(self.l3(x))
-        x = F.relu(self.l4(x))
-        return self.l5(x)
+        batch_size = x.size(0)
+        x = F.relu(self.pooling(self.conv1(x)))
+        x = F.relu(self.pooling(self.conv2(x)))
+        x = x.view(batch_size, -1)
+        x = self.fc(x)
+        return x
 
 model = Net()
 
@@ -51,6 +50,7 @@ def train(epoch):
         loss = criterion(outputs,labels)
         loss.backward()
         optimizer.step()
+
         running_loss += loss.item()
         if batch_idx % 300 == 299:
             print(epoch,batch_idx,running_loss/300)
@@ -69,7 +69,7 @@ def test():
     print('Accuracy on test set: %d %%' % (100 * correct / total))
 
 if '__main__' == __name__:
-    for epoch in range(20):
+    for epoch in range(10):
         train(epoch)
         test()
 
